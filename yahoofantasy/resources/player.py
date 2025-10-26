@@ -21,10 +21,7 @@ class Player:
     def get_stats(self, week_num=None):
         """Get this player's stats for a given week or the whole season"""
         stats_data = self._fetch_stats(week_num)["player_stats"]
-        return [
-            Stat.from_value(s, self.league.game_code)
-            for s in get_value(stats_data).stats.stat
-        ]
+        return [Stat.from_value(s) for s in get_value(stats_data).stats.stat]
 
     def get_stat(self, stat_display, week_num=None):
         """Get an individual player stat for a given week or the whole season"""

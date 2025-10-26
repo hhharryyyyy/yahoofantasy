@@ -1,8 +1,8 @@
-# 🏆 Yahoo Fantasy API Wrapper 🏆
+# 🏆 Yahoo Fantasy NBA API Wrapper 🏆
 
 The Yahoo Fantasy Sports API is difficult to comprehend, has [this strange one-page documentation setup](https://developer.yahoo.com/fantasysports/guide/) that is hard to navigate, and seems to only want to conform to a small portion of the OAuth spec. This library/SDK makes your life easier if you want to write an app that interfaces with the Yahoo Fantasy Sports API.
 
-This library will work for any Yahoo Fantasy Sports API leagues/teams. It contains some common constructs and helper methods for head-to-head leagues for the NFL 🏈, MLB ⚾, NHL 🏒 and NBA 🏀.
+This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
 
 ## Table of Contents
 
@@ -29,12 +29,12 @@ You're going to want to start off by logging in to your Yahoo Developer applicat
 yahoofantasy login
 ```
 
-Once you've logged in, create a context and use that to make requests. For example, to fetch all of your leagues for a given game/season:
+Once you've logged in, create a context and use that to make requests. For example, to fetch all of your NBA leagues for a given season:
 ```python
 from yahoofantasy import Context
 
 ctx = Context()
-leagues = ctx.get_leagues('mlb', 2020)
+leagues = ctx.get_leagues(2020)
 for league in leagues:
     print(league.name + " -- " + league.league_type)
 ```
@@ -63,7 +63,7 @@ There is a general hierarchy that head-to-head leagues will follow. This hierarc
 
 * Your account will belong to one or more **League** objects.
 ```python
-for league in ctx.get_leagues('mlb', 2019):
+for league in ctx.get_leagues(2019):
     print(f"{league.id} - {league.name} ({league.league_type})")
 ```
 
@@ -71,7 +71,7 @@ for league in ctx.get_leagues('mlb', 2019):
 ```python
 from yahoofantasy import League
 
-league = League(ctx, '388.l.25000')  # Use a manual league ID or get it from league.id above
+league = League(ctx, '428.l.25000')  # Example league key
 for player in league.players():
     print(f"{player.name.full} - {player.display_position} - {player.editorial_team_abbr}")
 ```
@@ -80,7 +80,7 @@ for player in league.players():
 ```python
 from yahoofantasy import League
 
-league = League(ctx, '388.l.25000')  # Use a manual league ID or get it from league.id above
+league = League(ctx, '428.l.25000')
 for team in league.teams():
     print(f"Team Name: {team.name}\tManager: {team.manager.nickname}")
 ```
@@ -131,14 +131,13 @@ This package comes with a built in CLI to let you do some handy tasks without wr
 
 Each CLI command has these common properties/arguments to let you control its behavior
 
-* **-g/--game** - which sport you are exporting (e.g., nfl, mlb)
 * **-s/--season** - which season you are exporting (e.g., 2020, 2019, etc)
 * **-o/--output** - the filename of the CSV to write to, defaults to `stdout` which prints to stdout instead of to a file
 
-If you don't provide these parameters you will be prompted for the required ones when you run your command. 
+If you don't provide these parameters you will be prompted for the required ones when you run your command.
 These parameters must be provided after the `dump` command but before the type of export you want to complete. For example:
 ```bash
-yahoofantasy dump -g nfl -s 2020 -o path/to/output.csv performances
+yahoofantasy dump -s 2020 -o path/to/output.csv performances
 ```
 
 ### Types of Exports
@@ -152,10 +151,10 @@ yahoofantasy dump performances
 ```
 
 Simplified output example:
-| name | week | manager | position | points | Pass TD | Rush Yds |
+| name | week | manager | position | points | FG% | 3PTM |
 |-|-|-|-|-|-|-|
-| Drew Brees | 1 | Manager Name | QB | 16.4 | 2 | 2 |
-| Dalvin Cook | 1 | Manager | RB | 21.3 | 0 | 50 |
+| Player A | 1 | Manager Name | G | 38.5 | 0.500 | 5 |
+| Player B | 1 | Manager | C | 29.0 | 0.620 | 0 |
 
 #### Matchups
 
@@ -168,8 +167,8 @@ yahoofantasy dump matchups
 Simplified output example:
 | week | manager | win | points | proj_points | opponent | opp_points | opp_proj_points |
 |-|-|-|-|-|-|-|-|
-| 1 | Manager 1 | False | 90.0 | 133.55 | Manager 2 | 142.68 | 136.79 |
-| 1 | Manager 2 | True | 142.68 | 136.79 | Manager 1 | 90.0 | 133.55 |
+| 1 | Manager 1 | False | 820.0 | 840.5 | Manager 2 | 845.2 | 835.7 |
+| 1 | Manager 2 | True | 845.2 | 835.7 | Manager 1 | 820.0 | 840.5 |
 
 #### Draft Results
 
@@ -182,8 +181,8 @@ yahoofantasy dump draftresults
 Simplified output example:
 | pick | round | manager | player | pos |
 |-|-|-|-|-|
-| 1 | 1 | Manager 1 | Christian McCaffrey | RB |
-| 2 | 1 | Manager 2 | Saquon Barkley | RB |
+| 1 | 1 | Manager 1 | Nikola Jokić | C |
+| 2 | 1 | Manager 2 | Luka Dončić | G |
 
 #### Transactions
 
@@ -196,8 +195,8 @@ yahoofantasy dump transactions
 Simplified output example:
 | type | player_type | player | from | to | ts | week_idx | bid |
 |-|-|-|-|-|-|-|-|
-| drop | drop | Damien Harris | Elementary Mr Watson | waivers | 09/09/2020, 20:57:15 | 36 |  |
-| add/drop | add | James Robinson | waivers | Kittles taste the ðŸŒˆ | 09/11/2020, 00:22:20 | 36 |  |
+| drop | drop | Player X | Team A | waivers | 11/02/2024, 13:20:15 | 05 |  |
+| add/drop | add | Player Y | waivers | Team B | 11/03/2024, 09:12:20 | 05 |  |
 
 ### Shell (Python interpreter)
 
@@ -218,6 +217,17 @@ yahoofantasy clear-cache
 ## Development
 
 Issues, pull requests, and contributions are more than welcome.
+
+## Roadmap (NBA-only)
+
+- [x] NBA-only focus: context, games mapping, examples, CLI simplified
+- [ ] League metadata: `League.settings()`, `stat_categories()`, `roster_positions()`
+- [ ] Players: filters/search/sort on `League.players(...)`
+- [ ] Player extras: `ownership()`, `draft_analysis()`, injury/notes
+- [ ] Team: `matchups()`, `stats()`, `transactions()`
+- [ ] Transactions (write): add/drop/add-drop/trade/FAAB POST helpers
+- [ ] Robust retries/backoff for 429/5xx
+- [ ] Docs/examples for all new methods; CLI dumps for ownership/players
 
 ### Unit Tests
 To run the tests, after install:

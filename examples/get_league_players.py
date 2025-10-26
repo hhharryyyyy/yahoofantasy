@@ -3,7 +3,7 @@ from yahoofantasy import Context
 c = Context()
 
 # Get all basketball leagues belonged to 2023
-leagues = c.get_leagues("nba", 2023)
+leagues = c.get_leagues(2023)
 # select the first league to get players from
 league = leagues[0]
 # Print the name of the league and whether it was private/public

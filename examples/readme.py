@@ -6,8 +6,8 @@ from yahoofantasy import Context
 
 ctx = Context()
 
-# Get all baseball leagues I belonged to in 2019
-for league in ctx.get_leagues("mlb", 2019):
+# Get all basketball leagues I belonged to in 2019
+for league in ctx.get_leagues(2019):
     print("~~~~~~~~ LEAGUE ~~~~~~~~")
     print(f"{league.id} - {league.name} ({league.league_type})")
     print()

@@ -2,8 +2,8 @@ from yahoofantasy import Context
 
 c = Context()
 
-# Get all baseball leagues I belonged to in 2019
-leagues = c.get_leagues("mlb", 2019)
+# Get all basketball leagues I belonged to in 2019
+leagues = c.get_leagues(2019)
 for league in leagues:
     # Print the name of the league and whether it was private/public
     print(league.name + " -- " + league.league_type)

@@ -104,14 +104,13 @@ class Context:
             self._get_access_token()
         return make_request(url, *args, token=self._access_token, **kwargs)
 
-    def get_leagues(self, game, season, persist_ttl=DEFAULT_TTL):
-        """Get a list of all leagues for a given game and season
+    def get_leagues(self, season, persist_ttl=DEFAULT_TTL):
+        """Get a list of all NBA leagues for a given season (NBA-only build)
 
         Args:
-            game (str) - the fantasy game we're looking at
             season (int/str) - the fantasy season to get leagues for
         """
-        game_id = get_game_id(game, season)
+        game_id = get_game_id("nba", season)
         data = self._load_or_fetch(
             "leagues." + str(game_id),
             "users;use_login=1/games;game_keys={}/leagues".format(game_id),

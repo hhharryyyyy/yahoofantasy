@@ -15,10 +15,9 @@ class Stat:
         return Stat(id=id, **d)
 
     @staticmethod
-    def from_value(d, game="mlb"):
-        """Create a Stat object from an API stat value"""
-        # TODO: Get the game from a context or something like that
-        return get_stat_from_value(d, game)
+    def from_value(d):
+        """Create a Stat object from an API stat value (NBA only)"""
+        return get_stat_from_value(d)
 
     def __repr__(self):
         return f"Stat {self.display} - {self.value}"

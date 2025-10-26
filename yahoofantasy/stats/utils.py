@@ -1,29 +1,14 @@
-from .mlb import stats as stats_mlb
-from .nfl import stats as stats_nfl
 from .nba import stats as stats_nba
-from .nhl import stats as stats_nhl
-
-league_types = {
-    "mlb": stats_mlb,
-    "nfl": stats_nfl,
-    "nba": stats_nba,
-    "nhl": stats_nhl
-}
 
 
-def get_stat_from_value(stat_obj, league_type="mlb"):
-    """Given a stat_obj, get a Stat object with an associated value"""
-    global league_types
-    stats = league_types.get(league_type)
-    if not stats:
-        raise ValueError("League type of {} isn't valid".format(league_type))
+def get_stat_from_value(stat_obj):
+    """Given a stat_obj, get a Stat object with an associated value (NBA only)"""
+    stats = stats_nba
 
     stat_id = str(stat_obj.stat_id)
     stat_lookup = stats.get(stat_id)
     if not stat_lookup:
-        raise ValueError(
-            "Stat ID {} not found in {} stats".format(stat_id, league_type)
-        )
+        raise ValueError("Stat ID {} not found in NBA stats".format(stat_id))
 
     from .stat import Stat
 
@@ -32,31 +17,22 @@ def get_stat_from_value(stat_obj, league_type="mlb"):
     return stat
 
 
-def get_stat_from_stat_list(stat_display, stat_list, order=None, league_type="mlb"):
-    global league_types
-    stats = league_types.get(league_type)
-    if not stats:
-        raise ValueError("League type of {} isn't valid".format(league_type))
+def get_stat_from_stat_list(stat_display, stat_list):
+    """Resolve a stat value from a list by display name (NBA only)."""
+    stats = stats_nba
 
     target_stat_id = None
     for stat_id, stat_data in stats.items():
-        # Some stats are the same for hitters/pitchers, if we specify the order we'll
-        # know which stat we're talking about
-        # 1 means higher is better, so for Runs order=1 is for hitters, 0 for pitchers
-        if stat_data["display"] == stat_display and (
-            order is None or order == stat_data["order"]
-        ):
+        if stat_data["display"] == stat_display:
             target_stat_id = stat_id
             break
     else:
-        raise ValueError(
-            "Stat {} not found in {} stats".format(stat_display, league_type)
-        )
+        raise ValueError("Stat {} not found in NBA stats".format(stat_display))
 
     for stat in stat_list:
         if str(stat.stat_id) == str(target_stat_id):
             return stat.value
     else:
         raise ValueError(
-            "Stat {}(id:{}) not found in input stat list".format(stat_display, stat_id)
+            "Stat {}(id:{}) not found in input stat list".format(stat_display, target_stat_id)
         )

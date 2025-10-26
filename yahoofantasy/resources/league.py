@@ -152,11 +152,11 @@ class League:
         Returns None if the league is not configured for league history
 
         Example:
-        >>> lg = ctx.get_leagues('mlb', 2022)[0]
+        >>> lg = ctx.get_leagues(2022)[0]
         >>> lg.past_league_id
-        (404, 12345)
+        (410, 12345)
 
-        404 represents the MLB game code for 2021, 12345 is the league ID
+        410 represents the NBA game code for 2021, 12345 is the league ID
         """
         full_league_key = getattr(self, "renew", None)
         if not full_league_key:
