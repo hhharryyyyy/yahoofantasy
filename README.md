@@ -11,6 +11,7 @@ This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
 * [Authentication](#authentication)
 * [Concepts](#concepts)
 * [Command Line (CLI)](#command-line-cli)
+* [Roadmap](#roadmap)
 * [Development](#development)
 
 ## Installation
@@ -214,6 +215,10 @@ The yahoofantasy library maintains its own persisted cache of certain Yahoo! API
 yahoofantasy clear-cache
 ```
 
+## Roadmap
+
+See the NBA planner roadmap in `docs/ROADMAP.md`.
+
 ## Development
 
 Issues, pull requests, and contributions are more than welcome.
@@ -230,15 +235,37 @@ Issues, pull requests, and contributions are more than welcome.
 - [ ] Docs/examples for all new methods; CLI dumps for ownership/players
 
 ### Unit Tests
-To run the tests, after install:
+Install dependencies, then run tests:
 ```bash
-py.test
+pip install -r requirements.txt
+pip install -r test_requirements.txt
+pytest -q
 ```
 
-Or to keep running tests using testmon and drop into a pdb shell on failure (my preferred mode):
+To run with coverage:
+```bash
+pytest --cov=yahoofantasy --cov-report=term-missing
+```
+
+To keep running tests using testmon and drop into a pdb shell on failure (my preferred mode):
 ```bash
 pytest-watch --pdb -- --testmon -s
 ```
+
+#### Optional: Live integration test
+There is an optional integration test that validates a real OAuth refresh and a simple Yahoo Fantasy API call. It is disabled by default and will only run when you explicitly opt in and provide credentials via environment variables.
+
+Run it like this (only if you understand the security implications of setting secrets in your shell):
+```bash
+export YF_RUN_LIVE=1
+export YAHOO_CLIENT_ID=...    # do not commit these
+export YAHOO_CLIENT_SECRET=...
+export YAHOO_REFRESH_TOKEN=...
+pytest -m integration -q
+```
+Notes:
+- Secrets are read from environment variables only; nothing is persisted.
+- CI should generally skip these by default: `-m "not integration"`.
 
 ### Releasing
 I use [bump2version](https://github.com/c4urself/bump2version) to manage version bumping. This will update the version number in the library, commit it, and create a version tag.
