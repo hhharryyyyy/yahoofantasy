@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
+import logging
 from yahoofantasy.api.parse import (
     parse_response,
     get_value,
@@ -11,6 +12,7 @@ from yahoofantasy.api.parse import (
 class TestParse(TestCase):
     def test_get_value(self):
         """get_value turns XML response into attribute objects"""
+        logging.info("parse.get_value converts badgerfish JSON into attribute objects")
         resp_file = Path(__file__).parent / "sample_data" / "example.xml"
         parsed = parse_response(resp_file.read_text())
         values = get_value(parsed)
@@ -20,10 +22,12 @@ class TestParse(TestCase):
         self.assertEqual(root.list_of_items.item_object[0].name, "Item 1")
 
     def test_as_list(self):
+        logging.info("parse.as_list wraps non-list values and preserves lists")
         self.assertEqual(as_list(5), [5])
         self.assertEqual(as_list([5]), [5])
 
     def test_from_response_object(self):
+        logging.info("parse.from_response_object sets attributes and respects protected ones")
         class Obj(object):
             @property
             def protected_prop(self):

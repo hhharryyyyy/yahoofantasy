@@ -1,4 +1,5 @@
 from unittest import TestCase
+import logging
 
 from yahoofantasy.resources.roster import Roster
 from yahoofantasy.resources.league import League
@@ -33,6 +34,7 @@ def make_players_payload(positions):
 
 class TestRoster(TestCase):
     def test_players_and_active_players(self):
+        logging.info("roster.players materializes Player objects and filters active_players")
         # Build the team/league context and payload
         positions = [
             ("nba.p.1", "G"),
@@ -46,13 +48,8 @@ class TestRoster(TestCase):
         team = type("T", (), {"league": league, "id": "428.t.1"})()
         roster = Roster(team, week_num=5)
 
-        # Mimic how Team.roster fills _raw and sets players
-        roster = roster
-        roster = roster
-        roster = roster
-        # Set _raw as Team.roster would
-        roster = roster
-        roster._raw = payload["fantasy_content"]["team"]["roster"] = payload["fantasy_content"]["team"]
+        # Mimic how Team.roster fills _raw (roster_data)
+        roster._raw = {"players": payload["fantasy_content"]["team"]["players"]}
 
         # Access players property, which materializes Player objects
         players = roster.players

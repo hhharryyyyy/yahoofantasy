@@ -135,7 +135,7 @@ Each CLI command has these common properties/arguments to let you control its be
 * **-s/--season** - which season you are exporting (e.g., 2020, 2019, etc)
 * **-o/--output** - the filename of the CSV to write to, defaults to `stdout` which prints to stdout instead of to a file
 
-If you don't provide these parameters you will be prompted for the required ones when you run your command.
+If you do not provide these parameters you will be prompted for the required ones when you run your command.
 These parameters must be provided after the `dump` command but before the type of export you want to complete. For example:
 ```bash
 yahoofantasy dump -s 2020 -o path/to/output.csv performances
@@ -235,22 +235,19 @@ Issues, pull requests, and contributions are more than welcome.
 - [ ] Docs/examples for all new methods; CLI dumps for ownership/players
 
 ### Unit Tests
-Install dependencies, then run tests:
+Fast commands via Makefile (uses Python 3.11.7 path by default; override with `make PY=python`):
 ```bash
-pip install -r requirements.txt
-pip install -r test_requirements.txt
-pytest -q
+make install-dev      # pip install -r requirements.txt and test_requirements.txt
+make test-unit        # run unit tests only, concise output (default -q)
+make test             # run all tests (concise output by default)
 ```
 
 To run with coverage:
 ```bash
-pytest --cov=yahoofantasy --cov-report=term-missing
+python -m pytest --cov=yahoofantasy --cov-report=term-missing
 ```
 
-To keep running tests using testmon and drop into a pdb shell on failure (my preferred mode):
-```bash
-pytest-watch --pdb -- --testmon -s
-```
+
 
 #### Optional: Live integration test
 There is an optional integration test that validates a real OAuth refresh and a simple Yahoo Fantasy API call. It is disabled by default and will only run when you explicitly opt in and provide credentials via environment variables.
@@ -261,11 +258,11 @@ export YF_RUN_LIVE=1
 export YAHOO_CLIENT_ID=...    # do not commit these
 export YAHOO_CLIENT_SECRET=...
 export YAHOO_REFRESH_TOKEN=...
-pytest -m integration -q
+make test-integration   # turns on live logging for visibility
 ```
 Notes:
 - Secrets are read from environment variables only; nothing is persisted.
-- CI should generally skip these by default: `-m "not integration"`.
+- CI should generally skip these by default by using the unit test target: `make test-unit`.
 
 ### Releasing
 I use [bump2version](https://github.com/c4urself/bump2version) to manage version bumping. This will update the version number in the library, commit it, and create a version tag.

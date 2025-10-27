@@ -12,17 +12,17 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
 ### Core
 - [x] NBA-only context and auth (OAuth2, token refresh)
 - [x] Persistence cache with TTL; per-endpoint sensible defaults
-- [ ] Add request backoff/retries for 429/5xx (exponential with jitter; honor Retry-After)
+- [x] Add request backoff/retries for 429/5xx (exponential with jitter; honor Retry-After)
 
 ### League configuration (required for 9-cat)
-- [ ] League.settings()
+- [x] League.settings()
   - URI: `league/{league_key}/settings`
   - Returns: `scoring_type`, `stat_categories`, `position_types`, `roster_positions`, playoffs schedule, lineup lock policy
-- [ ] League.stat_categories() (explicit helper)
-- [ ] League.position_types() and League.roster_positions() (explicit helpers)
+- [x] League.stat_categories() (explicit helper)
+- [x] League.position_types() and League.roster_positions() (explicit helpers)
 
 ### Player discovery and filtering
-- [ ] League.players(position=None, status=None, search=None, sort=None, sort_type=None, start=0, count=25)
+- [x] League.players(position=None, status=None, search=None, sort=None, sort_type=None, start=0, count=25)
   - URI: `league/{league_key}/players;{filters}`
   - Filters: `position`(G/F/C), `status`(A/FA/W/T/K), `search`, `sort`, `sort_type`, pagination
 
@@ -68,7 +68,7 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
 - [ ] yahoofantasy league settings
 
 ### Reliability and DX
-- [ ] Network backoff configuration via env (YF_MAX_RETRIES, YF_BACKOFF_BASE_SEC)
+- [~] Network backoff configuration via env (YF_MAX_RETRIES, YF_BACKOFF_BASE_SEC)
 - [ ] Script to auto-update NBA game IDs for new seasons
 
 
