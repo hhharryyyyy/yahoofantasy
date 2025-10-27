@@ -1,18 +1,41 @@
-# 🏆 Yahoo Fantasy NBA API Wrapper 🏆
+/* stylelint-disable */
+Yahoo Fantasy NBA API Wrapper
+=============================
 
 The Yahoo Fantasy Sports API is difficult to comprehend, has [this strange one-page documentation setup](https://developer.yahoo.com/fantasysports/guide/) that is hard to navigate, and seems to only want to conform to a small portion of the OAuth spec. This library/SDK makes your life easier if you want to write an app that interfaces with the Yahoo Fantasy Sports API.
 
 This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
 
+## Features (NBA H2H)
+
+- Auth and context: OAuth2 with automatic token refresh
+- Persistent cache with TTL per endpoint
+- HTTP reliability: exponential backoff with jitter; honors Retry-After (config via env)
+- NBA game code mapping by season
+- League:
+  - settings(), stat_categories(), position_types(), roster_positions()
+  - players(position/status/search/sort/sort_type/start/count)
+  - standings(), transactions(), draft_results()
+  - weeks() resilient, current_week(), playoffs()
+- Team:
+  - players(), roster(week)
+  - matchups(start_week, end_week)
+  - stats(type='season'|'week', week)
+- Player: get_stats(), get_stat(), get_points(), ownership()
+- Sync helpers: Context.sync_initial(season), League.sync_delta(last_tx_ts, current_week)
+- CLI: login, dump (performances, matchups, draftresults, transactions), shell, clear-cache
+
 ## Table of Contents
 
-* [Installation](#installation)
-* [Basic Usage](#basic-usage)
-* [Authentication](#authentication)
-* [Concepts](#concepts)
-* [Command Line (CLI)](#command-line-cli)
-* [Roadmap](#roadmap)
-* [Development](#development)
+- [Installation](#installation)
+- [Quickstart](#quickstart)
+- [Examples](#examples)
+- [Authentication](#authentication)
+- [Core Concepts](#core-concepts)
+- [CLI](#cli)
+- [Configuration](#configuration)
+- [Roadmap](#roadmap)
+- [Development](#development)
 
 ## Installation
 
@@ -22,7 +45,14 @@ pip install yahoofantasy
 
 You will also need a application registered on the [Yahoo Developer Site](https://developer.yahoo.com/apps/). You'll need your client ID and secret. The app just needs to have read permissions. See below for instructions on how to set up your Yahoo Developer application if you don't have one already.
 
-## Basic Usage
+## Configuration
+
+- Environment variables for network reliability:
+  - `YF_MAX_RETRIES` (default: 3)
+  - `YF_BACKOFF_BASE_SEC` (default: 0.5)
+  These control exponential backoff with jitter and honor `Retry-After`.
+
+## Quickstart
 
 You're going to want to start off by logging in to your Yahoo Developer application, then creating a context. This context is where all of your API requests will originate and league information will live.
 
@@ -30,7 +60,7 @@ You're going to want to start off by logging in to your Yahoo Developer applicat
 yahoofantasy login
 ```
 
-Once you've logged in, create a context and use that to make requests. For example, to fetch all of your NBA leagues for a given season:
+Once logged in, create a context and use it for API calls. For example, fetch all NBA leagues for a season and print names:
 ```python
 from yahoofantasy import Context
 
@@ -38,6 +68,30 @@ ctx = Context()
 leagues = ctx.get_leagues(2020)
 for league in leagues:
     print(league.name + " -- " + league.league_type)
+```
+
+## Examples
+
+```python
+# Settings and categories
+lg = ctx.get_leagues(2025)[0]
+settings = lg.settings()
+cats = [str(c.display_name) for c in lg.stat_categories()]
+
+# Players filters (free agent guards, sorted by AR)
+fas = lg.players(position="G", status="FA", sort="AR", sort_type="season", count=25)
+
+# Ownership for a player
+own = fas[0].ownership()
+
+# Team weekly stats
+team = lg.teams()[0]
+wk = lg.current_week()
+totals = team.stats(type="week", week=wk)
+
+# Sync helpers
+snapshot = ctx.sync_initial(2025)
+delta = lg.sync_delta(last_tx_ts=1700000000, current_week=wk)
 ```
 
 ## Authentication
@@ -58,17 +112,17 @@ yahoofantasy login
 
 Try `yahoofantasy login --help` for some advanced options, like customizing the port or redirect URI
 
-## Concepts
+## Core Concepts
 
 There is a general hierarchy that head-to-head leagues will follow. This hierarchy is represented with classes within this library. This code walkthrough will help you understand the organization of the library. The following examples are intended to be read sequentially and assume you have a **Context** with your logged in Yahoo credentials called `ctx`.
 
-* Your account will belong to one or more **League** objects.
+Your account will belong to one or more **League** objects.
 ```python
 for league in ctx.get_leagues(2019):
     print(f"{league.id} - {league.name} ({league.league_type})")
 ```
 
-* A **League** will contain multiple **Player** objects.
+A **League** will contain multiple **Player** objects.
 ```python
 from yahoofantasy import League
 
@@ -77,7 +131,7 @@ for player in league.players():
     print(f"{player.name.full} - {player.display_position} - {player.editorial_team_abbr}")
 ```
 
-* A **League** will contain multiple **Team** objects.
+A **League** will contain multiple **Team** objects.
 ```python
 from yahoofantasy import League
 
@@ -86,7 +140,7 @@ for team in league.teams():
     print(f"Team Name: {team.name}\tManager: {team.manager.nickname}")
 ```
 
-* A **Team** has multiple **Player** objects that define their lineup. This is their current lineup and not a lineup for a given week
+A **Team** has multiple **Player** objects that define their lineup (current, not week-specific):
 ```python
 for team in league.teams():
     players = team.players()
@@ -94,7 +148,7 @@ for team in league.teams():
         print(f"Player: {player.name.full}")
 ```
 
-* A **League** has **Standings**, which is an ordered list of **Team** objects.
+A **League** has **Standings**, an ordered list of **Team** objects:
 ```python
 for team in league.standings():
     outcomes = team.team_standings.outcome_totals
@@ -102,14 +156,14 @@ for team in league.standings():
           f"({outcomes.wins}-{outcomes.losses}-{outcomes.ties})")
 ```
 
-* A **League** will contain multiple **Week** objects. A **Week** contains multiple **Matchup** objects, which are a head-to-head matchup of two **Team** objects for that week.
+A **League** contains **Week** objects. A **Week** contains **Matchup** objects (head-to-head of two teams):
 ```python
 week_3 = league.weeks()[2]
 for matchup in week_3.matchups:
     print(f"{matchup.team1.name} vs {matchup.team2.name}")
 ```
 
-* A **Matchup** will have multiple **Stat** objects for the two teams. A **Stat** object contains the display name of the stat as well as the value for the team.
+A **Matchup** has multiple **Stat** objects for the two teams:
 ```python
 matchup = week_3.matchups[0]
 print(f"{matchup.team1.name}\tvs\t{matchup.team2.name}")
@@ -124,7 +178,7 @@ yahoofantasy login
 python readme.py
 ```
 
-## Command Line (CLI)
+## CLI
 
 This package comes with a built in CLI to let you do some handy tasks without writing any Python code. This is useful for exporting a spreadsheet with trades in your league, player performances, etc and doing some separate analysis on them.
 
@@ -224,15 +278,13 @@ See the NBA planner roadmap in `docs/ROADMAP.md`.
 Issues, pull requests, and contributions are more than welcome.
 
 ## Roadmap (NBA-only)
+See full planner roadmap in `docs/ROADMAP.md`. Highlights completed here:
 
-- [x] NBA-only focus: context, games mapping, examples, CLI simplified
-- [ ] League metadata: `League.settings()`, `stat_categories()`, `roster_positions()`
-- [ ] Players: filters/search/sort on `League.players(...)`
-- [ ] Player extras: `ownership()`, `draft_analysis()`, injury/notes
-- [ ] Team: `matchups()`, `stats()`, `transactions()`
-- [ ] Transactions (write): add/drop/add-drop/trade/FAAB POST helpers
-- [ ] Robust retries/backoff for 429/5xx
-- [ ] Docs/examples for all new methods; CLI dumps for ownership/players
+- Auth, caching, robust retries
+- League settings and players filters
+- Player ownership
+- Weeks, matchups, team stats helpers
+- Sync helpers (initial snapshot and deltas)
 
 ### Unit Tests
 Fast commands via Makefile (uses Python 3.11.7 path by default; override with `make PY=python`):

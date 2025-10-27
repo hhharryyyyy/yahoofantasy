@@ -20,6 +20,8 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
   - Returns: `scoring_type`, `stat_categories`, `position_types`, `roster_positions`, playoffs schedule, lineup lock policy
 - [x] League.stat_categories() (explicit helper)
 - [x] League.position_types() and League.roster_positions() (explicit helpers)
+ - [x] League.current_week() helper
+ - [x] League.playoffs() helper(s)
 
 ### Player discovery and filtering
 - [x] League.players(position=None, status=None, search=None, sort=None, sort_type=None, start=0, count=25)
@@ -51,8 +53,8 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
 - [ ] Document TTL policy and refresh strategy
 
 ## v1 Nice-to-haves (still read-only)
-- [ ] Team.matchups(start_week=None, end_week=None)
-- [ ] Team.stats(type='season'|'week', week=None)
+- [x] Team.matchups(start_week=None, end_week=None)
+- [~] Team.stats(type='season'|'week', week=None)
 - [ ] Player.injury()/notes() where supported
 
 ## v2 (post‑v1, optional)

@@ -209,6 +209,42 @@ class League:
             return as_list(rp.roster_position)
         return []
 
+    def current_week(self, persist_ttl=DEFAULT_TTL):
+        """Derive current week via settings or scoreboard.
+
+        For NBA H2H leagues, Yahoo exposes current week under settings.current_week in most seasons.
+        Fallback: attempt to infer from scoreboard endpoint if needed.
+        """
+        try:
+            s = self.settings(persist_ttl)
+            cw = getattr(s, "current_week", None)
+            if cw:
+                return int(cw)
+        except Exception:
+            pass
+        # Fallback heuristic: try end_week and use min(now, end_week). Without dates, return start_week.
+        try:
+            sw = int(getattr(s, "start_week", 1))
+            return sw
+        except Exception:
+            return None
+
+    def playoffs(self, persist_ttl=DEFAULT_TTL):
+        """Return playoffs info from settings, if available."""
+        s = self.settings(persist_ttl)
+        out = {}
+        for k in ("start_week", "end_week", "current_week"):
+            if hasattr(s, k):
+                out[k] = int(getattr(s, k))
+        # Yahoo settings often include playoff start week and number of teams/rounds
+        for k in ("playoff_start_week", "playoff_end_week", "num_playoff_teams", "playoff_type"):
+            if hasattr(s, k):
+                try:
+                    out[k] = int(getattr(s, k))
+                except Exception:
+                    out[k] = getattr(s, k)
+        return out
+
     def sync_delta(self, last_tx_ts, current_week, include_next_week=True):
         """Return incremental updates since a timestamp for planner refresh.
 

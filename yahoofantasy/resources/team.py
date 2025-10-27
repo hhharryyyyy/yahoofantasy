@@ -48,5 +48,59 @@ class Team:
         roster = from_response_object(roster, roster_data, set_raw=True)
         return roster
 
+    def matchups(self, start_week=None, end_week=None, persist_ttl=DEFAULT_TTL):
+        """Return list of matchup objects for this team over a week range."""
+        # Resolve week range via league settings if not provided
+        if start_week is None or end_week is None:
+            s = self.league.settings(persist_ttl)
+            if start_week is None:
+                start_week = int(getattr(s, "start_week", 1))
+            if end_week is None:
+                end_week = int(getattr(s, "end_week", start_week))
+        from .matchup import Matchup
+        out = []
+        for wk in range(int(start_week), int(end_week) + 1):
+            week_data = self.ctx._load_or_fetch(
+                f"weeks.{self.league.id}.{wk}", f"scoreboard;week={wk}", league=self.league.id
+            )
+            # Extract matchups that include this team id
+            matchups = week_data["fantasy_content"]["league"]["scoreboard"]["matchups"].get("matchup", [])
+            for m in matchups:
+                participants = as_list(m["teams"]["team"]) if "teams" in m else []
+                ids = {t["team_key"] for t in participants if "team_key" in t}
+                if self.id in ids:
+                    mo = Matchup(self.ctx, self.league, None)
+                    out.append(from_response_object(mo, m))
+        return out
+
+    def stats(self, type="season", week=None, persist_ttl=DEFAULT_TTL):
+        """Aggregate team stats by summing players' stats for a week or season.
+        type: 'season' or 'week'; if 'week', week is required
+        """
+        if type not in ("season", "week"):
+            raise ValueError("type must be 'season' or 'week'")
+        if type == "week" and not week:
+            raise ValueError("week is required when type='week'")
+        # Fetch roster for the scope
+        roster = self.roster(week if type == "week" else None)
+        # Pre-fetch stats via roster helper if available
+        try:
+            roster.fetch_player_stats()
+        except Exception:
+            pass
+        # Sum category values across all players
+        from yahoofantasy.stats.utils import get_stat_from_value
+        totals = {}
+        for player in roster.players:
+            stats = player.get_stats(week if type == "week" else None)
+            for stat in stats:
+                # stat is Stat object; ensure numeric
+                try:
+                    value = float(stat.value)
+                except Exception:
+                    continue
+                totals[stat.display] = totals.get(stat.display, 0.0) + value
+        return totals
+
     def __repr__(self):
         return f"Team {self.name}"
