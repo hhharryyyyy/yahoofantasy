@@ -27,7 +27,7 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
   - Filters: `position`(G/F/C), `status`(A/FA/W/T/K), `search`, `sort`, `sort_type`, pagination
 
 ### Ownership and extras
-- [ ] Player.ownership()
+- [x] Player.ownership()
   - URI: `league/{league_key}/players;player_keys={player_key}/ownership`
 - [ ] Player.draft_analysis() [optional for v1]
 

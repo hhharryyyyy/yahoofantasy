@@ -1,5 +1,6 @@
 from yahoofantasy.api.parse import from_response_object, get_value
 from yahoofantasy.stats.stat import Stat
+from yahoofantasy.api.parse import as_list
 
 
 class Player:
@@ -50,3 +51,16 @@ class Player:
         player_data = data["fantasy_content"]["league"]["players"]["player"]
         self._stats_cache[week_num] = player_data
         return player_data
+
+    def ownership(self):
+        """Fetch ownership info for this player for the league.
+
+        URI: league/{league_key}/players;player_keys={player_key}/ownership
+        """
+        data = self.league.ctx._load_or_fetch(
+            f"ownership.{self.league.id}.{self.player_key}",
+            f"league/{self.league.id}/players;player_keys={self.player_key}/ownership",
+        )
+        player_obj = data["fantasy_content"]["league"]["players"]["player"]
+        # Response contains an `ownership` object per player
+        return get_value(player_obj["ownership"]) if isinstance(player_obj, dict) else get_value(player_obj[0]["ownership"])
