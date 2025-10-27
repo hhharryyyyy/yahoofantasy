@@ -119,14 +119,25 @@ class League:
         return standings
 
     def weeks(self, persist_ttl=DEFAULT_TTL):
-        if not self.start_week or not self.end_week:
+        start_week = getattr(self, "start_week", None)
+        end_week = getattr(self, "end_week", None)
+        # Fallback: try to pull from settings if not present on League object
+        if not start_week or not end_week:
+            try:
+                s = self.settings(persist_ttl)
+                if hasattr(s, "start_week") and hasattr(s, "end_week"):
+                    start_week = int(s.start_week)
+                    end_week = int(s.end_week)
+            except Exception:
+                pass
+        if not start_week or not end_week:
             raise AttributeError(
                 "Can't fetch weeks for a league without start/end weeks. Is it a "
                 "head-to-head league? Did you sync your league already?"
             )
         logger.debug("Looking up weeks")
         out = []
-        for week_num in range(self.start_week, self.end_week + 1):
+        for week_num in range(start_week, end_week + 1):
             week = Week(self.ctx, self, week_num)
             week.sync()
             out.append(week)
@@ -197,6 +208,47 @@ class League:
         if rp and hasattr(rp, "roster_position"):
             return as_list(rp.roster_position)
         return []
+
+    def sync_delta(self, last_tx_ts, current_week, include_next_week=True):
+        """Return incremental updates since a timestamp for planner refresh.
+
+        - Transactions newer than last_tx_ts
+        - Scoreboard for current week (and optionally next)
+        - Rosters for current week (and optionally next) for each team
+        """
+        # Transactions delta
+        try:
+            transactions_all = self.transactions()
+        except Exception:
+            transactions_all = []
+        transactions_new = [
+            t for t in transactions_all if hasattr(t, "timestamp") and int(t.timestamp) > int(last_tx_ts)
+        ]
+
+        # Scoreboard weeks
+        weeks = []
+        for wk in {current_week, current_week + 1} if include_next_week else {current_week}:
+            w = Week(self.ctx, self, int(wk))
+            w.sync()
+            weeks.append(w)
+
+        # Rosters for each team for current (and optionally next) week
+        rosters = {}
+        for team in self.teams():
+            week_map = {}
+            try:
+                week_map[int(current_week)] = team.roster(int(current_week))
+                if include_next_week:
+                    week_map[int(current_week) + 1] = team.roster(int(current_week) + 1)
+            except Exception:
+                pass
+            rosters[team.id] = week_map
+
+        return {
+            "transactions": transactions_new,
+            "scoreboard_weeks": weeks,
+            "rosters": rosters,
+        }
 
     def __repr__(self):
         return "League: {}".format(getattr(self, "name", "Unnamed League"))

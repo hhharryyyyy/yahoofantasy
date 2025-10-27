@@ -32,7 +32,7 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
 - [ ] Player.draft_analysis() [optional for v1]
 
 ### Scoreboards, rosters, transactions
-- [ ] League.weeks() resilient behavior for NBA H2H
+- [x] League.weeks() resilient behavior for NBA H2H
 - [ ] Efficient initial sync plan:
   - leagues → teams → settings → scoreboard (needed weeks) → each team’s roster by week → league transactions (full)
 - [ ] Efficient refresh plan (helpers):
@@ -42,8 +42,8 @@ Reference: Yahoo Fantasy Sports API Guide: [link](https://developer.yahoo.com/fa
   - players list: on-demand or long TTL
 
 ### Incremental sync helpers
-- [ ] Context.sync_initial(season) → returns a structured snapshot for planner
-- [ ] League.sync_delta(last_tx_ts, current_week) → returns deltas to apply
+- [x] Context.sync_initial(season) → returns a structured snapshot for planner
+- [x] League.sync_delta(last_tx_ts, current_week) → returns deltas to apply
 
 ### Testing and docs
 - [ ] Unit tests for new endpoints (settings, players filters, ownership)

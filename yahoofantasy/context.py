@@ -124,3 +124,53 @@ class Context:
             from_response_object(league, league_data)
             leagues.append(league)
         return leagues
+
+    def sync_initial(self, season, persist_ttl=DEFAULT_TTL):
+        """Efficient initial sync snapshot for planner consumption.
+
+        Plan:
+          - leagues for season
+          - for each: teams, settings, scoreboard for all weeks, team rosters per week, full transactions
+        """
+        leagues = self.get_leagues(season, persist_ttl=persist_ttl)
+        snapshot = []
+        for lg in leagues:
+            league_obj = {
+                "league": lg,
+                "settings": lg.settings(persist_ttl),
+                "teams": lg.teams(persist_ttl),
+                "transactions": lg.transactions(persist_ttl),
+                "weeks": [],
+                "rosters": {},
+            }
+            # Determine week range via settings fallback
+            try:
+                s = league_obj["settings"]
+                start_week = int(get(s, "start_week"))
+                end_week = int(get(s, "end_week"))
+            except Exception:
+                start_week = getattr(lg, "start_week", None)
+                end_week = getattr(lg, "end_week", None)
+            if not start_week or not end_week:
+                # Skip weeks if not resolvable; leave empty
+                start_week, end_week = (None, None)
+            # Scoreboard and rosters across weeks
+            if start_week and end_week:
+                for wk in range(start_week, end_week + 1):
+                    w = lg.weeks()[wk - start_week] if hasattr(lg, "weeks") else None
+                    if not w:
+                        from yahoofantasy.resources.week import Week
+                        w = Week(self, lg, wk)
+                        w.sync()
+                    league_obj["weeks"].append(w)
+                # Rosters for each team by week
+                for team in league_obj["teams"]:
+                    wk_map = {}
+                    for wk in range(start_week, end_week + 1):
+                        try:
+                            wk_map[wk] = team.roster(wk)
+                        except Exception:
+                            continue
+                    league_obj["rosters"][team.id] = wk_map
+            snapshot.append(league_obj)
+        return snapshot
