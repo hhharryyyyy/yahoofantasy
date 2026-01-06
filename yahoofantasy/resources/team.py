@@ -1,5 +1,6 @@
 from yahoofantasy.util.logger import logger
-from yahoofantasy.api.parse import as_list, from_response_object
+from yahoofantasy.api.parse import as_list, from_response_object, parse_response
+from yahoofantasy.api.xml_builder import build_roster_change_xml
 from yahoofantasy.util.persistence import DEFAULT_TTL
 from .player import Player
 from .roster import Roster
@@ -104,3 +105,140 @@ class Team:
 
     def __repr__(self):
         return f"Team {self.name}"
+
+    # -------------------------------------------------------------------------
+    # Write Operations - Lineup Management
+    # -------------------------------------------------------------------------
+
+    def set_lineup(self, player_positions, week=None, coverage_type="week"):
+        """Set player positions for a given week.
+
+        Args:
+            player_positions: List of tuples or dicts specifying positions
+                - Tuple: (player_or_key, position)
+                - Dict: {"player_key": "nba.p.5007", "position": "PG"}
+            week: Week number (defaults to current week)
+            coverage_type: "week" or "date" (default: "week")
+
+        Returns:
+            Updated Roster object
+
+        Raises:
+            InvalidPositionError: If player cannot play the position
+            RosterError: On other roster errors
+
+        Example:
+            team.set_lineup([
+                ("nba.p.5007", "PG"),
+                (player_obj, "BN"),
+            ], week=16)
+        """
+        if week is None:
+            week = self.league.current_week()
+
+        # Normalize player_positions to list of dicts
+        players_data = []
+        for item in player_positions:
+            if isinstance(item, dict):
+                players_data.append(item)
+            elif isinstance(item, (list, tuple)) and len(item) == 2:
+                player, position = item
+                player_key = player.player_key if hasattr(player, "player_key") else str(player)
+                players_data.append({"player_key": player_key, "position": position})
+            else:
+                raise ValueError(
+                    "player_positions must be list of tuples (player, position) "
+                    "or dicts with player_key and position"
+                )
+
+        logger.debug("Setting lineup for team {} week {}".format(self.id, week))
+        xml = build_roster_change_xml(coverage_type, week, players_data)
+        self.ctx._make_write_request(
+            "team/{}/roster".format(self.id), xml, method="PUT"
+        )
+
+        # Invalidate cached roster and return fresh one
+        return self.roster(week)
+
+    def move_to_bench(self, player, week=None):
+        """Move a player to the bench.
+
+        Args:
+            player: Player object or player_key
+            week: Week number (defaults to current week)
+
+        Returns:
+            Updated Roster object
+        """
+        return self.set_lineup([(player, "BN")], week=week)
+
+    def move_to_active(self, player, position, week=None):
+        """Move a player from bench to an active position.
+
+        Args:
+            player: Player object or player_key
+            position: Target position (e.g., "PG", "SG", "SF", "PF", "C", "G", "F", "UTIL")
+            week: Week number (defaults to current week)
+
+        Returns:
+            Updated Roster object
+        """
+        return self.set_lineup([(player, position)], week=week)
+
+    def move_to_ir(self, player, week=None):
+        """Move an injured player to IR slot.
+
+        Args:
+            player: Player object or player_key
+            week: Week number (defaults to current week)
+
+        Returns:
+            Updated Roster object
+        """
+        return self.set_lineup([(player, "IL")], week=week)
+
+    # -------------------------------------------------------------------------
+    # Write Operations - Add/Drop Players
+    # -------------------------------------------------------------------------
+
+    def add_player(self, player, drop_player=None):
+        """Add a free agent to this team.
+
+        Args:
+            player: Player object or player_key to add
+            drop_player: Optional player to drop (for add/drop combo)
+
+        Returns:
+            Transaction object representing the completed transaction
+
+        Raises:
+            PlayerNotAvailableError: If player is not a free agent
+            RosterFullError: If roster is full and no drop specified
+        """
+        if drop_player:
+            return self.league.add_drop_player(player, drop_player, self)
+        return self.league.add_player(player, self)
+
+    def drop_player(self, player):
+        """Drop a player from this team.
+
+        Args:
+            player: Player object or player_key to drop
+
+        Returns:
+            Transaction object
+        """
+        return self.league.drop_player(player, self)
+
+    def claim_player(self, player, faab_bid=None, drop_player=None):
+        """Submit a waiver claim for a player.
+
+        Args:
+            player: Player object or player_key to claim
+            faab_bid: Optional FAAB bid amount (for FAAB leagues)
+            drop_player: Optional player to drop when claim processes
+
+        Returns:
+            Transaction object (with status='pending' for waivers)
+        """
+        return self.league.claim_player(player, self, faab_bid=faab_bid, drop_player=drop_player)

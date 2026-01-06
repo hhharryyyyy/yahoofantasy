@@ -56,5 +56,30 @@ class Transaction:
             trans.involved_players.append(tp)
         return trans
 
+    @classmethod
+    def from_write_response(cls, resp, league):
+        """Parse the response from a write operation.
+
+        Write responses may have a slightly different structure than
+        read responses. This method handles both formats.
+
+        Args:
+            resp: Parsed response dict (from parse_response)
+            league: The League object
+
+        Returns:
+            Transaction object
+        """
+        # Write responses typically have the transaction directly
+        # in fantasy_content.transaction, same as read responses
+        tx_data = resp
+        if isinstance(resp, dict):
+            if "fantasy_content" in resp:
+                tx_data = resp.get("fantasy_content", {}).get("transaction", resp)
+            elif "transaction" in resp:
+                tx_data = resp["transaction"]
+
+        return cls.from_response(tx_data, league)
+
     def __repr__(self):
         return f"Transaction {self.type}"

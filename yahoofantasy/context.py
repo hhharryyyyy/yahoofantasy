@@ -4,6 +4,7 @@ from time import time
 from .resources.league import League
 from yahoofantasy.util.logger import logger
 from yahoofantasy.api.fetch import make_request
+from yahoofantasy.api.write import make_write_request
 from yahoofantasy.api.parse import (
     parse_response,
     get_value,
@@ -103,6 +104,25 @@ class Context:
         if not self._access_token or time() > self._access_token_expires:
             self._get_access_token()
         return make_request(url, *args, token=self._access_token, **kwargs)
+
+    def _make_write_request(self, url, data, method="POST", **kwargs):
+        """Make a write request (POST/PUT) to the Yahoo Fantasy API.
+
+        Args:
+            url: The API endpoint (relative to base URL)
+            data: XML payload as string
+            method: HTTP method ("POST" or "PUT")
+            **kwargs: Additional arguments passed to make_write_request
+
+        Returns:
+            Response text (XML) on success
+
+        Raises:
+            YahooFantasyError: On API errors
+        """
+        if not self._access_token or time() > self._access_token_expires:
+            self._get_access_token()
+        return make_write_request(url, self._access_token, data, method, **kwargs)
 
     def get_leagues(self, season, persist_ttl=DEFAULT_TTL):
         """Get a list of all NBA leagues for a given season (NBA-only build)

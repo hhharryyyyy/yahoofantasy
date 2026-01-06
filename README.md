@@ -17,10 +17,13 @@ This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
   - players(position/status/search/sort/sort_type/start/count)
   - standings(), transactions(), draft_results()
   - weeks() resilient, current_week(), playoffs()
+  - **Write ops**: add_player(), drop_player(), add_drop_player(), claim_player(), cancel_waiver_claim()
 - Team:
   - players(), roster(week)
   - matchups(start_week, end_week)
   - stats(type='season'|'week', week)
+  - **Write ops**: set_lineup(), move_to_bench(), move_to_active(), move_to_ir()
+  - **Write ops**: add_player(), drop_player(), claim_player()
 - Player: get_stats(), get_stat(), get_points(), ownership()
 - Sync helpers: Context.sync_initial(season), League.sync_delta(last_tx_ts, current_week)
 - CLI: login, dump (performances, matchups, draftresults, transactions), shell, clear-cache
@@ -30,6 +33,7 @@ This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Examples](#examples)
+- [Roster Management (Write Operations)](#roster-management-write-operations)
 - [Authentication](#authentication)
 - [Core Concepts](#core-concepts)
 - [CLI](#cli)
@@ -43,7 +47,7 @@ This build focuses exclusively on Fantasy Basketball (NBA) head-to-head leagues.
 pip install yahoofantasy
 ```
 
-You will also need a application registered on the [Yahoo Developer Site](https://developer.yahoo.com/apps/). You'll need your client ID and secret. The app just needs to have read permissions. See below for instructions on how to set up your Yahoo Developer application if you don't have one already.
+You will also need a application registered on the [Yahoo Developer Site](https://developer.yahoo.com/apps/). You'll need your client ID and secret. For read-only operations, the app just needs read permissions. For roster management (add/drop, lineup changes, waiver claims), you'll need **read/write** permissions. See below for instructions on how to set up your Yahoo Developer application if you don't have one already.
 
 ## Configuration
 
@@ -93,6 +97,109 @@ totals = team.stats(type="week", week=wk)
 snapshot = ctx.sync_initial(2025)
 delta = lg.sync_delta(last_tx_ts=1700000000, current_week=wk)
 ```
+
+## Roster Management (Write Operations)
+
+The library supports write operations for managing your fantasy basketball roster. These operations require OAuth write permissions (see note below).
+
+### Lineup Changes
+
+Move players between active positions and bench:
+
+```python
+team = lg.teams()[0]  # Get your team
+roster = team.roster()
+
+# Move a player to the bench
+team.move_to_bench(roster.players[0])
+
+# Move a player to an active position
+team.move_to_active(roster.players[1], "PG")
+
+# Move injured player to IR
+team.move_to_ir(injured_player)
+
+# Batch lineup changes
+team.set_lineup([
+    (roster.players[0], "PG"),
+    (roster.players[1], "SG"),
+    (roster.players[2], "BN"),
+], week=16)
+```
+
+### Add/Drop Players
+
+Pick up free agents and drop roster players:
+
+```python
+# Find free agents
+free_agents = lg.players(status="FA")
+target = free_agents[0]
+
+# Add a free agent (if roster has space)
+tx = team.add_player(target)
+print(f"Added {target.name.full}")
+
+# Add/drop combo
+tx = team.add_player(target, drop_player=roster.players[-1])
+
+# Drop a player
+tx = team.drop_player(roster.players[-1])
+```
+
+### Waiver Claims
+
+Submit and manage waiver claims:
+
+```python
+# Find waiver players
+waiver_players = lg.players(status="W")
+target = waiver_players[0]
+
+# Submit waiver claim
+tx = team.claim_player(target)
+print(f"Waiver claim submitted: {tx.status}")  # 'pending'
+
+# FAAB league claim with bid
+tx = team.claim_player(target, faab_bid=15, drop_player=roster.players[-1])
+
+# Cancel pending claim
+lg.cancel_waiver_claim(tx.transaction_key)
+```
+
+### Error Handling
+
+Write operations can fail for various reasons. The library provides specific exceptions:
+
+```python
+from yahoofantasy import (
+    YahooFantasyError,
+    PlayerNotAvailableError,
+    RosterFullError,
+    InvalidPositionError,
+    InsufficientFAABError,
+    InsufficientScopeError,
+)
+
+try:
+    team.add_player(target)
+except PlayerNotAvailableError:
+    print("Player is already owned or on waivers")
+except RosterFullError:
+    print("Roster is full - drop someone first")
+except InsufficientScopeError:
+    print("Re-authenticate with write permissions")
+except YahooFantasyError as e:
+    print(f"API error: {e}")
+```
+
+### OAuth Write Permissions
+
+Write operations require the `fspt-w` (Fantasy Sports Write) scope. If you get an `InsufficientScopeError`, you need to re-authenticate:
+
+1. Go to [Yahoo Developer Apps](https://developer.yahoo.com/apps/)
+2. Ensure your app has "Fantasy Sports" permission with **Read/Write** access
+3. Re-run `yahoofantasy login` to get a new token with write permissions
 
 ## Authentication
 

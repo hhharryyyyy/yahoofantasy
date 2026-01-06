@@ -1,5 +1,12 @@
 from yahoofantasy.api.games import get_game_id
-from yahoofantasy.api.parse import from_response_object, get_value, as_list
+from yahoofantasy.api.parse import from_response_object, get_value, as_list, parse_response
+from yahoofantasy.api.xml_builder import (
+    build_add_player_xml,
+    build_drop_player_xml,
+    build_add_drop_xml,
+    build_waiver_claim_xml,
+    build_cancel_waiver_xml,
+)
 from yahoofantasy.util.persistence import DEFAULT_TTL
 from yahoofantasy.util.logger import logger
 from .team import Team
@@ -285,6 +292,123 @@ class League:
             "scoreboard_weeks": weeks,
             "rosters": rosters,
         }
+
+    # -------------------------------------------------------------------------
+    # Write Operations - Transaction Submission
+    # -------------------------------------------------------------------------
+
+    def _submit_transaction(self, xml_data):
+        """Submit a transaction to the league.
+
+        This is the low-level method used by Team methods.
+
+        Args:
+            xml_data: XML payload string
+
+        Returns:
+            Transaction object representing the result
+        """
+        logger.debug("Submitting transaction to league {}".format(self.id))
+        resp = self.ctx._make_write_request(
+            "transactions", xml_data, method="POST", league=self.id
+        )
+        # Parse response and return Transaction object
+        parsed = parse_response(resp)
+        tx_data = parsed.get("fantasy_content", {}).get("transaction", {})
+        return Transaction.from_response(tx_data, self)
+
+    def add_player(self, player, team):
+        """Add a free agent player to a team.
+
+        Args:
+            player: Player object or player_key string
+            team: Team object or team_key string
+
+        Returns:
+            Transaction object representing the completed transaction
+
+        Raises:
+            PlayerNotAvailableError: If player is not available
+            RosterFullError: If roster is full
+        """
+        player_key = player.player_key if hasattr(player, "player_key") else str(player)
+        team_key = team.id if hasattr(team, "id") else str(team)
+
+        xml = build_add_player_xml(player_key, team_key)
+        return self._submit_transaction(xml)
+
+    def drop_player(self, player, team):
+        """Drop a player from a team.
+
+        Args:
+            player: Player object or player_key string
+            team: Team object or team_key string
+
+        Returns:
+            Transaction object
+        """
+        player_key = player.player_key if hasattr(player, "player_key") else str(player)
+        team_key = team.id if hasattr(team, "id") else str(team)
+
+        xml = build_drop_player_xml(player_key, team_key)
+        return self._submit_transaction(xml)
+
+    def add_drop_player(self, add_player, drop_player, team):
+        """Add one player and drop another in a single transaction.
+
+        Args:
+            add_player: Player object or player_key to add
+            drop_player: Player object or player_key to drop
+            team: Team object or team_key string
+
+        Returns:
+            Transaction object
+        """
+        add_key = add_player.player_key if hasattr(add_player, "player_key") else str(add_player)
+        drop_key = drop_player.player_key if hasattr(drop_player, "player_key") else str(drop_player)
+        team_key = team.id if hasattr(team, "id") else str(team)
+
+        xml = build_add_drop_xml(add_key, team_key, drop_key, team_key)
+        return self._submit_transaction(xml)
+
+    def claim_player(self, player, team, faab_bid=None, drop_player=None):
+        """Submit a waiver claim for a player.
+
+        Args:
+            player: Player object or player_key to claim
+            team: Team object or team_key claiming the player
+            faab_bid: Optional FAAB bid amount (for FAAB leagues)
+            drop_player: Optional player to drop when claim processes
+
+        Returns:
+            Transaction object (with status='pending' for waivers)
+        """
+        player_key = player.player_key if hasattr(player, "player_key") else str(player)
+        team_key = team.id if hasattr(team, "id") else str(team)
+        drop_key = None
+        if drop_player:
+            drop_key = drop_player.player_key if hasattr(drop_player, "player_key") else str(drop_player)
+
+        xml = build_waiver_claim_xml(
+            player_key, team_key, faab_bid=faab_bid, drop_player_key=drop_key, source_team_key=team_key
+        )
+        return self._submit_transaction(xml)
+
+    def cancel_waiver_claim(self, transaction_key):
+        """Cancel a pending waiver claim.
+
+        Args:
+            transaction_key: The transaction key to cancel
+
+        Returns:
+            bool: True if cancelled successfully
+        """
+        logger.debug("Cancelling waiver claim {}".format(transaction_key))
+        xml = build_cancel_waiver_xml(transaction_key)
+        self.ctx._make_write_request(
+            "transaction/{}".format(transaction_key), xml, method="PUT"
+        )
+        return True
 
     def __repr__(self):
         return "League: {}".format(getattr(self, "name", "Unnamed League"))

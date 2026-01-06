@@ -7,4 +7,17 @@ from .resources.team import Team  # noqa: F401
 from .resources.week import Week  # noqa: F401
 from .stats.stat import Stat  # noqa: F401
 
-__version__ = "1.4.9"
+# Exceptions for write operations
+from .exceptions import (  # noqa: F401
+    YahooFantasyError,
+    RosterError,
+    TransactionError,
+    InvalidPositionError,
+    RosterFullError,
+    PlayerNotAvailableError,
+    InsufficientFAABError,
+    WaiverPriorityError,
+    InsufficientScopeError,
+)
+
+__version__ = "1.5.0"
